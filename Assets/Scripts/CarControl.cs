@@ -9,7 +9,7 @@ public class Car : MonoBehaviour
     public WheelCollider frwc, flwc, brwc, blwc;
     public MeshRenderer frwm, flwm, brwm, blwm;
 
-    [SerializeField] private TextMeshPro _speedometer;
+    [SerializeField] private TMP_Text _speedometer;
 
     public Rigidbody rb;
     private float _forward = 0;
@@ -20,6 +20,7 @@ public class Car : MonoBehaviour
     private WheelHit[] _wheelHits = new WheelHit[4];
     private float _averageWheelHitForwardSlip = 0f;
 
+    public Light rearLeftLight, rearRightLight;
 
     void Start()
     {
@@ -98,7 +99,7 @@ public class Car : MonoBehaviour
             {
                 _rpm -= 10;
             }
-            else
+            else if (_rpm > 0)
             {
                 _rpm -= 5;
             }
@@ -113,7 +114,18 @@ public class Car : MonoBehaviour
         SyncWheelModelAndCollider(frwc, frwm);
         SyncWheelModelAndCollider(blwc, blwm);
         SyncWheelModelAndCollider(brwc, brwm);
-        _speedometer.text = Math.Floor(rb.linearVelocity.magnitude).ToString() + " km/h";
+        _speedometer.SetText(Math.Floor(rb.linearVelocity.magnitude * 3.6).ToString() + " km/h");
+        if (brwc.brakeTorque > 0 || blwc.brakeTorque > 0)
+        {
+            rearLeftLight.intensity = 0.5f;
+            rearRightLight.intensity = 0.5f;
+        }
+        else
+        {
+            rearLeftLight.intensity = 0.1f;
+            rearRightLight.intensity = 0.1f;
+        }
+
     }
 
     void SyncWheelModelAndCollider(WheelCollider wheelCollider, MeshRenderer meshRenderer)
