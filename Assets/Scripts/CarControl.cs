@@ -2,7 +2,7 @@ using System;
 using TMPro;
 using UnityEngine;
 
-public class Car : MonoBehaviour
+public class CarControl : MonoBehaviour
 {
 
     // f: Front, l: Left, r: Right, b: Back, c: Collider, m: Mesh
@@ -10,10 +10,15 @@ public class Car : MonoBehaviour
     public MeshRenderer frwm, flwm, brwm, blwm;
 
     [SerializeField] private TMP_Text _speedometer;
+    [SerializeField] private TMP_Text _rpmText;
+
+    [SerializeField] private TMP_Text _scoreText;
 
     public Rigidbody rb;
     private float _forward = 0;
-    private float _rpm = 1000f;
+    private float _rpm = 0f;
+
+    private float _measuredSpeed = 0f;
 
     private float _steer = 0;
 
@@ -21,6 +26,25 @@ public class Car : MonoBehaviour
     private float _averageWheelHitForwardSlip = 0f;
 
     public Light rearLeftLight, rearRightLight;
+
+    public AudioSource engineSound;
+    public AudioSource skidSound;
+
+    private int _score = 0;
+
+    public int Score
+    {
+        get
+        {
+            return _score;
+        }
+        set
+        {
+            _score = value;
+            _scoreText.SetText(_score.ToString() + " Star" + (_score == 1 ? "" : "s"));
+        }
+    }
+
 
     void Start()
     {
@@ -50,8 +74,8 @@ public class Car : MonoBehaviour
             _steer = 0.3f;
         }
 
-        frwc.motorTorque = _rpm * _forward;
-        flwc.motorTorque = _rpm * _forward;
+        frwc.motorTorque = _rpm;
+        flwc.motorTorque = _rpm;
 
         frwc.steerAngle = 80f * _steer;
         flwc.steerAngle = 80f * _steer;
@@ -82,30 +106,25 @@ public class Car : MonoBehaviour
 
         _averageWheelHitForwardSlip = wheelHitForwardSlipSum / _wheelHits.Length;
 
-        if (Math.Abs(_averageWheelHitForwardSlip) < 0.45 && Math.Abs(_forward) > 0.75)
+
+        if (_rpm < 4000 && _rpm > -1000 && Math.Abs(_forward) >= 0.25)
         {
-            if (Math.Abs(_steer) < 0.3f)
-            {
-                _rpm += 10;
-            }
-            else
-            {
-                _rpm += 5;
-            }
+            _rpm += 7 * (1 - Math.Abs(_averageWheelHitForwardSlip)) * _forward;// * (_measuredSpeed + 10) / 10;
         }
-        if (Math.Abs(_averageWheelHitForwardSlip) >= 0.45)
+        else if (Math.Abs(_forward) < 0.25)
         {
-            if (_rpm > 100)
+
+            if (
+                _rpm > 0
+            )
             {
                 _rpm -= 10;
             }
-            else if (_rpm > 0)
+            else
             {
-                _rpm -= 5;
+                _rpm += 10;
             }
         }
-
-
     }
 
     void Update()
@@ -114,7 +133,12 @@ public class Car : MonoBehaviour
         SyncWheelModelAndCollider(frwc, frwm);
         SyncWheelModelAndCollider(blwc, blwm);
         SyncWheelModelAndCollider(brwc, brwm);
-        _speedometer.SetText(Math.Floor(rb.linearVelocity.magnitude * 3.6).ToString() + " km/h");
+
+        _measuredSpeed = Math.Abs(rb.linearVelocity.magnitude);
+
+        _speedometer.SetText(Math.Floor(_measuredSpeed * 3.6).ToString() + " km/h");
+        _rpmText.SetText(Math.Floor(_rpm).ToString() + " RPM");
+
         if (brwc.brakeTorque > 0 || blwc.brakeTorque > 0)
         {
             rearLeftLight.intensity = 0.5f;
@@ -125,6 +149,29 @@ public class Car : MonoBehaviour
             rearLeftLight.intensity = 0.1f;
             rearRightLight.intensity = 0.1f;
         }
+
+        //engineSound.pitch = Mathf.Clamp(rb.linearVelocity.magnitude / 10, 0.5f, 2.5f);
+        engineSound.pitch = Mathf.Clamp(_rpm / 1000, 0.5f, 2.5f);
+
+        /*
+        // FIXME: remove click sound while looping and add start and end sounds
+        if (Math.Abs(_averageWheelHitForwardSlip) >= 0.25)
+        {
+            skidSound.volume = Mathf.Clamp(Math.Abs(_averageWheelHitForwardSlip), 0, 1);
+            if (!skidSound.isPlaying)
+            {
+                skidSound.loop = true;
+                skidSound.Play();
+            }
+        }
+        else
+        {
+            if (skidSound.isPlaying)
+            {
+                skidSound.loop = false;
+            }
+        }
+        */
 
     }
 
