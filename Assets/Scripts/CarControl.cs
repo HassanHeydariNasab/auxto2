@@ -85,10 +85,8 @@ public class CarControl : MonoBehaviour
         frwc.motorTorque = _rpm;
         flwc.motorTorque = _rpm;
 
-        frwc.steerAngle = 80f * _steer;
-        flwc.steerAngle = 80f * _steer;
-
-
+        frwc.steerAngle = 40f * _steer;
+        flwc.steerAngle = 40f * _steer;
 
         if (_handbrakeAction.action.IsPressed())
         {
