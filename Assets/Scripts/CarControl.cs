@@ -17,13 +17,12 @@ public class CarControl : MonoBehaviour
 
     [SerializeField] private TMP_Text _scoreText;
 
-    public Rigidbody _rb;
+    [SerializeField] private Rigidbody _rb;
 
-    InputAction _forwardAction;
-    InputAction _steerAction;
-    InputAction _handbrakeAction;
+    [SerializeField] InputActionReference _forwardAction;
+    [SerializeField] InputActionReference _steerAction;
+    [SerializeField] InputActionReference _handbrakeAction;
     Vector3 _acceleration = new Vector3(0, 0, 0);
-    bool _hasTouch = false;
     bool _hasAcceleration = false;
     private float _forward = 0;
     private float _rpm = 0f;
@@ -58,26 +57,27 @@ public class CarControl : MonoBehaviour
 
     void Start()
     {
-        _forwardAction = InputSystem.actions.FindAction("Forward");
-        _steerAction = InputSystem.actions.FindAction("Steer");
-        _handbrakeAction = InputSystem.actions.FindAction("Handbrake");
         _hasAcceleration = SystemInfo.supportsAccelerometer;
+        Debug.Log("Accelerometer supported: " + _hasAcceleration);
+        InputSystem.EnableDevice(Accelerometer.current);
     }
 
     void FixedUpdate()
     {
-        // if (!_hasAcceleration)
-        // {
-        //     acceleration = Accelerometer.current.acceleration.ReadValue();
-        // }
+        if (_hasAcceleration)
+        {
+            _acceleration = Accelerometer.current.acceleration.ReadValue();
+        }
 
-        var forwardActionValue = _forwardAction.ReadValue<float>();
-        var steerActionValue = _steerAction.ReadValue<float>();
-        var handbrakeActionValue = _handbrakeAction.ReadValue<float>();
+        //Debug.Log("Acceleration: " + _acceleration);
+
+        var forwardActionValue = _forwardAction.action.ReadValue<float>();
+        var steerActionValue = _steerAction.action.ReadValue<float>();
+        var handbrakeActionValue = _handbrakeAction.action.ReadValue<float>();
 
         if (_hasAcceleration)
         {
-            _forward = _acceleration.y + 0.5f;
+            _forward = _acceleration.y + 0.75f;
             _steer = _acceleration.x;
         }
         else
@@ -96,16 +96,17 @@ public class CarControl : MonoBehaviour
 
 
 
-        if (_handbrakeAction.IsPressed())
+        if (_handbrakeAction.action.IsPressed())
         {
             brwc.brakeTorque = 10000f * handbrakeActionValue;
             blwc.brakeTorque = 10000f * handbrakeActionValue;
         }
-        else if (!_handbrakeAction.IsPressed())
+        else if (!_handbrakeAction.action.IsPressed())
         {
             brwc.brakeTorque = 0f;
             blwc.brakeTorque = 0f;
         }
+
 
         frwc.GetGroundHit(out _wheelHits[0]);
         flwc.GetGroundHit(out _wheelHits[1]);
@@ -125,11 +126,11 @@ public class CarControl : MonoBehaviour
         // Player tries to go with forward gear
         if (_rpm < 4000 && _forward > 0)
         {
-            _rpm += 15 * (1 - Math.Abs(_averageWheelHitForwardSlip)) * _forward;
+            _rpm += 10 * (1 - Math.Abs(_averageWheelHitForwardSlip)) * _forward;
         }
 
         // Player tries to go with neutral gear
-        else if (_forward == 0)
+        else if (_forward == 0 & _rpm != 0)
         {
             if (_rpm > 0)
             {
@@ -141,14 +142,26 @@ public class CarControl : MonoBehaviour
             }
         }
 
-        // Player tries to go with reverse gear
+        // reverse gear while going forward
         else if (_rpm > 0 && _forward <= 0)
         {
-            _rpm += 50 * (1 - Math.Abs(_averageWheelHitForwardSlip)) * _forward;
+            _rpm += 500 * (1 - Math.Abs(_averageWheelHitForwardSlip)) * _forward;
         }
+        // reverse gear while going backward
         else if (_rpm < 0 && _forward <= 0 && _rpm > -1000)
         {
-            _rpm += 3 * (1 - Math.Abs(_averageWheelHitForwardSlip)) * _forward;
+            _rpm += 7 * (1 - Math.Abs(_averageWheelHitForwardSlip)) * _forward;
+        }
+
+        if ((_forward < 0 && _rpm > 0 || _forward > 0 && _rpm < 0) && Math.Abs(_measuredSpeed) > 5f)
+        {
+            frwc.brakeTorque = 10000f;
+            flwc.brakeTorque = 10000f;
+        }
+        else
+        {
+            frwc.brakeTorque = 0f;
+            flwc.brakeTorque = 0f;
         }
     }
 
@@ -176,7 +189,7 @@ public class CarControl : MonoBehaviour
         }
 
         //engineSound.pitch = Mathf.Clamp(rb.linearVelocity.magnitude / 10, 0.5f, 2.5f);
-        engineSound.pitch = Mathf.Clamp(_rpm / 1000, 0.5f, 2.5f);
+        engineSound.pitch = Mathf.Clamp(Math.Abs(_rpm) / 1000, 0.5f, 2.5f);
 
         /*
         // FIXME: remove click sound while looping and add start and end sounds
