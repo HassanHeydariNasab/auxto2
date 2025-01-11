@@ -2,8 +2,6 @@ using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.InputSystem.Composites;
-using UnityEngine.InputSystem.Utilities;
 
 public class CarControl : MonoBehaviour
 {
@@ -14,30 +12,31 @@ public class CarControl : MonoBehaviour
 
     [SerializeField] private TMP_Text _speedometer;
     [SerializeField] private TMP_Text _rpmText;
-
     [SerializeField] private TMP_Text _scoreText;
 
     [SerializeField] private Rigidbody _rb;
 
-    [SerializeField] InputActionReference _forwardAction;
-    [SerializeField] InputActionReference _steerAction;
-    [SerializeField] InputActionReference _handbrakeAction;
+    [SerializeField] private InputActionReference _forwardAction;
+    [SerializeField] private InputActionReference _steerAction;
+    [SerializeField] private InputActionReference _handbrakeAction;
+
+    [SerializeField] private Light _rearLeftLight, _rearRightLight;
+
+    [SerializeField] private AudioSource engineSound;
+    [SerializeField] private AudioSource skidSound;
+
     Vector3 _acceleration = new Vector3(0, 0, 0);
     bool _hasAcceleration = false;
     private float _forward = 0;
     private float _rpm = 0f;
+    private float _steer = 0;
 
     private float _measuredSpeed = 0f;
-
-    private float _steer = 0;
+    private float _forwardVelocity = 0f;
 
     private WheelHit[] _wheelHits = new WheelHit[4];
     private float _averageWheelHitForwardSlip = 0f;
 
-    public Light rearLeftLight, rearRightLight;
-
-    public AudioSource engineSound;
-    public AudioSource skidSound;
 
     private int _score = 0;
 
@@ -58,7 +57,6 @@ public class CarControl : MonoBehaviour
     void Start()
     {
         _hasAcceleration = SystemInfo.supportsAccelerometer;
-        Debug.Log("Accelerometer supported: " + _hasAcceleration);
         InputSystem.EnableDevice(Accelerometer.current);
     }
 
@@ -68,8 +66,6 @@ public class CarControl : MonoBehaviour
         {
             _acceleration = Accelerometer.current.acceleration.ReadValue();
         }
-
-        //Debug.Log("Acceleration: " + _acceleration);
 
         var forwardActionValue = _forwardAction.action.ReadValue<float>();
         var steerActionValue = _steerAction.action.ReadValue<float>();
@@ -85,8 +81,6 @@ public class CarControl : MonoBehaviour
             _forward = forwardActionValue;
             _steer = steerActionValue * 0.3f;
         }
-
-        //Debug.Log("forward: " + forwardAction.ReadValue<float>() + "steer: " + steerAction.ReadValue<float>() + "handbrake: " + handbrakeAction.ReadValue<float>());
 
         frwc.motorTorque = _rpm;
         flwc.motorTorque = _rpm;
@@ -124,7 +118,7 @@ public class CarControl : MonoBehaviour
 
 
         // Player tries to go with forward gear
-        if (_rpm < 4000 && _forward > 0)
+        if (_rpm < 3000 && _forward > 0)
         {
             _rpm += 10 * (1 - Math.Abs(_averageWheelHitForwardSlip)) * _forward;
         }
@@ -153,10 +147,11 @@ public class CarControl : MonoBehaviour
             _rpm += 7 * (1 - Math.Abs(_averageWheelHitForwardSlip)) * _forward;
         }
 
-        if ((_forward < 0 && _rpm > 0 || _forward > 0 && _rpm < 0) && Math.Abs(_measuredSpeed) > 5f)
+        if (_forward < 0 && _forwardVelocity > 0 || _forward > 0 && _forwardVelocity < 0)
         {
             frwc.brakeTorque = 10000f;
             flwc.brakeTorque = 10000f;
+            //_rpm /= 2f;
         }
         else
         {
@@ -172,23 +167,23 @@ public class CarControl : MonoBehaviour
         SyncWheelModelAndCollider(blwc, blwm);
         SyncWheelModelAndCollider(brwc, brwm);
 
-        _measuredSpeed = Math.Abs(_rb.linearVelocity.magnitude);
+        _measuredSpeed = _rb.linearVelocity.magnitude;
+        _forwardVelocity = transform.InverseTransformDirection(_rb.linearVelocity).z;
 
         _speedometer.SetText(Math.Floor(_measuredSpeed * 3.6).ToString() + " km/h");
         _rpmText.SetText(Math.Floor(_rpm).ToString() + " RPM");
 
-        if (brwc.brakeTorque > 0 || blwc.brakeTorque > 0)
+        if (brwc.brakeTorque > 0 || blwc.brakeTorque > 0 || frwc.brakeTorque > 0 || flwc.brakeTorque > 0)
         {
-            rearLeftLight.intensity = 0.5f;
-            rearRightLight.intensity = 0.5f;
+            _rearLeftLight.intensity = 0.5f;
+            _rearRightLight.intensity = 0.5f;
         }
         else
         {
-            rearLeftLight.intensity = 0.1f;
-            rearRightLight.intensity = 0.1f;
+            _rearLeftLight.intensity = 0.1f;
+            _rearRightLight.intensity = 0.1f;
         }
 
-        //engineSound.pitch = Mathf.Clamp(rb.linearVelocity.magnitude / 10, 0.5f, 2.5f);
         engineSound.pitch = Mathf.Clamp(Math.Abs(_rpm) / 1000, 0.5f, 2.5f);
 
         /*
