@@ -1,6 +1,9 @@
 using System;
 using TMPro;
 using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.Composites;
+using UnityEngine.InputSystem.Utilities;
 
 public class CarControl : MonoBehaviour
 {
@@ -14,7 +17,14 @@ public class CarControl : MonoBehaviour
 
     [SerializeField] private TMP_Text _scoreText;
 
-    public Rigidbody rb;
+    public Rigidbody _rb;
+
+    InputAction _forwardAction;
+    InputAction _steerAction;
+    InputAction _handbrakeAction;
+    Vector3 _acceleration = new Vector3(0, 0, 0);
+    bool _hasTouch = false;
+    bool _hasAcceleration = false;
     private float _forward = 0;
     private float _rpm = 0f;
 
@@ -48,31 +58,35 @@ public class CarControl : MonoBehaviour
 
     void Start()
     {
+        _forwardAction = InputSystem.actions.FindAction("Forward");
+        _steerAction = InputSystem.actions.FindAction("Steer");
+        _handbrakeAction = InputSystem.actions.FindAction("Handbrake");
+        _hasAcceleration = SystemInfo.supportsAccelerometer;
     }
 
     void FixedUpdate()
     {
+        // if (!_hasAcceleration)
+        // {
+        //     acceleration = Accelerometer.current.acceleration.ReadValue();
+        // }
 
-        _forward = Input.acceleration.y == 0 ? 0 : Input.acceleration.y + 0.5f;
-        _steer = Input.acceleration.x == 0 ? 0 : Input.acceleration.x;
+        var forwardActionValue = _forwardAction.ReadValue<float>();
+        var steerActionValue = _steerAction.ReadValue<float>();
+        var handbrakeActionValue = _handbrakeAction.ReadValue<float>();
 
-        if (Input.GetKey(KeyCode.UpArrow))
+        if (_hasAcceleration)
         {
-            _forward = 1f;
+            _forward = _acceleration.y + 0.5f;
+            _steer = _acceleration.x;
         }
-        else if (Input.GetKey(KeyCode.DownArrow))
+        else
         {
-            _forward = -1f;
+            _forward = forwardActionValue;
+            _steer = steerActionValue * 0.3f;
         }
 
-        if (Input.GetKey(KeyCode.LeftArrow))
-        {
-            _steer = -0.3f;
-        }
-        else if (Input.GetKey(KeyCode.RightArrow))
-        {
-            _steer = 0.3f;
-        }
+        //Debug.Log("forward: " + forwardAction.ReadValue<float>() + "steer: " + steerAction.ReadValue<float>() + "handbrake: " + handbrakeAction.ReadValue<float>());
 
         frwc.motorTorque = _rpm;
         flwc.motorTorque = _rpm;
@@ -82,12 +96,12 @@ public class CarControl : MonoBehaviour
 
 
 
-        if ((Input.touchSupported && Input.touchCount > 0) || Input.GetKey(KeyCode.Space))
+        if (_handbrakeAction.IsPressed())
         {
-            brwc.brakeTorque = 10000f;
-            blwc.brakeTorque = 10000f;
+            brwc.brakeTorque = 10000f * handbrakeActionValue;
+            blwc.brakeTorque = 10000f * handbrakeActionValue;
         }
-        else if ((!Input.touchSupported) || (Input.touchCount == 0))
+        else if (!_handbrakeAction.IsPressed())
         {
             brwc.brakeTorque = 0f;
             blwc.brakeTorque = 0f;
@@ -107,23 +121,34 @@ public class CarControl : MonoBehaviour
         _averageWheelHitForwardSlip = wheelHitForwardSlipSum / _wheelHits.Length;
 
 
-        if (_rpm < 4000 && _rpm > -1000 && Math.Abs(_forward) >= 0.25)
-        {
-            _rpm += 7 * (1 - Math.Abs(_averageWheelHitForwardSlip)) * _forward;// * (_measuredSpeed + 10) / 10;
-        }
-        else if (Math.Abs(_forward) < 0.25)
-        {
 
-            if (
-                _rpm > 0
-            )
+        // Player tries to go with forward gear
+        if (_rpm < 4000 && _forward > 0)
+        {
+            _rpm += 15 * (1 - Math.Abs(_averageWheelHitForwardSlip)) * _forward;
+        }
+
+        // Player tries to go with neutral gear
+        else if (_forward == 0)
+        {
+            if (_rpm > 0)
             {
                 _rpm -= 10;
             }
-            else
+            else if (_rpm < 0)
             {
                 _rpm += 10;
             }
+        }
+
+        // Player tries to go with reverse gear
+        else if (_rpm > 0 && _forward <= 0)
+        {
+            _rpm += 50 * (1 - Math.Abs(_averageWheelHitForwardSlip)) * _forward;
+        }
+        else if (_rpm < 0 && _forward <= 0 && _rpm > -1000)
+        {
+            _rpm += 3 * (1 - Math.Abs(_averageWheelHitForwardSlip)) * _forward;
         }
     }
 
@@ -134,7 +159,7 @@ public class CarControl : MonoBehaviour
         SyncWheelModelAndCollider(blwc, blwm);
         SyncWheelModelAndCollider(brwc, brwm);
 
-        _measuredSpeed = Math.Abs(rb.linearVelocity.magnitude);
+        _measuredSpeed = Math.Abs(_rb.linearVelocity.magnitude);
 
         _speedometer.SetText(Math.Floor(_measuredSpeed * 3.6).ToString() + " km/h");
         _rpmText.SetText(Math.Floor(_rpm).ToString() + " RPM");
