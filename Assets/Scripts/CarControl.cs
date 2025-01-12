@@ -10,9 +10,10 @@ public class CarControl : MonoBehaviour
     public WheelCollider frwc, flwc, brwc, blwc;
     public MeshRenderer frwm, flwm, brwm, blwm;
 
+    [SerializeField] private MeshRenderer _bodyMeshRenderer;
+
     [SerializeField] private TMP_Text _speedometer;
     [SerializeField] private TMP_Text _rpmText;
-    [SerializeField] private TMP_Text _scoreText;
 
     [SerializeField] private Rigidbody _rb;
 
@@ -36,22 +37,6 @@ public class CarControl : MonoBehaviour
 
     private WheelHit[] _wheelHits = new WheelHit[4];
     private float _averageWheelHitForwardSlip = 0f;
-
-
-    private int _score = 0;
-
-    public int Score
-    {
-        get
-        {
-            return _score;
-        }
-        set
-        {
-            _score = value;
-            _scoreText.SetText(_score.ToString() + " Star" + (_score == 1 ? "" : "s"));
-        }
-    }
 
 
     void Start()
@@ -85,8 +70,8 @@ public class CarControl : MonoBehaviour
         frwc.motorTorque = _rpm;
         flwc.motorTorque = _rpm;
 
-        frwc.steerAngle = 40f * _steer;
-        flwc.steerAngle = 40f * _steer;
+        frwc.steerAngle = 30f * _steer;
+        flwc.steerAngle = 30f * _steer;
 
         if (_handbrakeAction.action.IsPressed())
         {
@@ -116,7 +101,7 @@ public class CarControl : MonoBehaviour
 
 
         // Player tries to go with forward gear
-        if (_rpm < 3000 && _forward > 0)
+        if (_rpm < 2000 && _forward > 0)
         {
             _rpm += 10 * (1 - Math.Abs(_averageWheelHitForwardSlip)) * _forward;
         }
@@ -145,7 +130,7 @@ public class CarControl : MonoBehaviour
             _rpm += 7 * (1 - Math.Abs(_averageWheelHitForwardSlip)) * _forward;
         }
 
-        if (_forward < 0 && _forwardVelocity > 0 || _forward > 0 && _forwardVelocity < 0)
+        if (_forward < 0 && _forwardVelocity > 10 || _forward > 0 && _forwardVelocity < -10)
         {
             frwc.brakeTorque = 10000f;
             flwc.brakeTorque = 10000f;
@@ -203,7 +188,6 @@ public class CarControl : MonoBehaviour
             }
         }
         */
-
     }
 
     void SyncWheelModelAndCollider(WheelCollider wheelCollider, MeshRenderer meshRenderer)
@@ -211,6 +195,11 @@ public class CarControl : MonoBehaviour
         wheelCollider.GetWorldPose(out Vector3 position, out Quaternion rotation);
         meshRenderer.transform.rotation = rotation;
         //TODO: position?
+    }
+
+    public void OnChangeColor(Color color)
+    {
+        _bodyMeshRenderer.materials[0].color = color;
     }
 
 }
