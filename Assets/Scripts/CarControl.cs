@@ -42,7 +42,10 @@ public class CarControl : MonoBehaviour
     void Start()
     {
         _hasAcceleration = SystemInfo.supportsAccelerometer;
-        InputSystem.EnableDevice(Accelerometer.current);
+        if (Accelerometer.current != null)
+        {
+            InputSystem.EnableDevice(Accelerometer.current);
+        }
     }
 
     void FixedUpdate()
