@@ -67,7 +67,7 @@ public class CarControl : MonoBehaviour
         else
         {
             _forward = forwardActionValue;
-            _steer = steerActionValue * 0.3f;
+            _steer = steerActionValue;
         }
 
         frwc.motorTorque = _rpm;
