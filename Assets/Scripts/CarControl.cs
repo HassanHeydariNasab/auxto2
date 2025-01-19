@@ -34,8 +34,8 @@ public class CarControl : MonoBehaviour
     private float _measuredSpeed = 0f;
     private float _forwardVelocity = 0f;
 
-    private WheelHit[] _wheelHits = new WheelHit[4];
-    private float _averageWheelHitForwardSlip = 0f;
+    // private WheelHit[] _wheelHits = new WheelHit[4];
+    // private float _averageWheelHitForwardSlip = 0f;
 
 
     void Start()
@@ -87,18 +87,20 @@ public class CarControl : MonoBehaviour
         }
 
 
-        frwc.GetGroundHit(out _wheelHits[0]);
-        flwc.GetGroundHit(out _wheelHits[1]);
-        brwc.GetGroundHit(out _wheelHits[2]);
-        blwc.GetGroundHit(out _wheelHits[3]);
+        /*
+                frwc.GetGroundHit(out _wheelHits[0]);
+                flwc.GetGroundHit(out _wheelHits[1]);
+                brwc.GetGroundHit(out _wheelHits[2]);
+                blwc.GetGroundHit(out _wheelHits[3]);
 
-        float wheelHitForwardSlipSum = 0;
-        for (int i = 0; i < _wheelHits.Length; i++)
-        {
-            wheelHitForwardSlipSum += _wheelHits[i].forwardSlip;
-        }
+                float wheelHitForwardSlipSum = 0;
+                for (int i = 0; i < _wheelHits.Length; i++)
+                {
+                    wheelHitForwardSlipSum += _wheelHits[i].forwardSlip;
+                }
 
-        _averageWheelHitForwardSlip = wheelHitForwardSlipSum / _wheelHits.Length;
+                _averageWheelHitForwardSlip = wheelHitForwardSlipSum / _wheelHits.Length;
+        */
 
         if (_forward < 0 && _forwardVelocity > 10 || _forward > 0 && _forwardVelocity < -10)
         {
@@ -135,9 +137,7 @@ public class CarControl : MonoBehaviour
             _rearRightLight.intensity = 0.1f;
         }
 
-        engineSound.pitch = Mathf.Clamp(Math.Abs(_forwardVelocity) / 30f, 0.5f, 2.5f);
-
-        Debug.Log(_averageWheelHitForwardSlip);
+        engineSound.pitch = Mathf.Clamp(Math.Abs(_forwardVelocity) / 20f, 0.5f, 3f);
 
         /*
         // FIXME: remove click sound while looping and add start and end sounds
