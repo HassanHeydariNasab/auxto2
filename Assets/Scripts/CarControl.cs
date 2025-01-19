@@ -112,13 +112,13 @@ public class CarControl : MonoBehaviour
         // Player tries to go with neutral gear
         else if (_forward == 0 & _rpm != 0)
         {
-            if (_rpm > 0)
+            if (_rpm > 50)
             {
-                _rpm -= 10;
+                _rpm -= 50;
             }
-            else if (_rpm < 0)
+            else if (_rpm < -50)
             {
-                _rpm += 10;
+                _rpm += 50;
             }
         }
 
@@ -133,11 +133,10 @@ public class CarControl : MonoBehaviour
             _rpm += 7 * (1 - Math.Abs(_averageWheelHitForwardSlip)) * _forward;
         }
 
-        if (_forward < 0 && _forwardVelocity > 10 || _forward > 0 && _forwardVelocity < -10)
+        if (_forward < 0 && _forwardVelocity > 0 || _forward > 0 && _forwardVelocity < 0)
         {
             frwc.brakeTorque = 10000f;
             flwc.brakeTorque = 10000f;
-            //_rpm /= 2f;
         }
         else
         {

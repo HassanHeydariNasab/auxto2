@@ -2,7 +2,6 @@ using UnityEngine;
 
 public class Collectable : MonoBehaviour
 {
-    public Color color = Color.red;
     private GameManager gameManager;
 
     void Start()
@@ -22,7 +21,8 @@ public class Collectable : MonoBehaviour
     {
         if (collider.gameObject.CompareTag("Player"))
         {
-            gameManager.score += 1;
+            gameManager.starSound.Play();
+            gameManager.Score += 1;
             Destroy(gameObject);
         }
     }
