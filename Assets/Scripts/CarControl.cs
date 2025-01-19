@@ -13,7 +13,6 @@ public class CarControl : MonoBehaviour
     [SerializeField] private MeshRenderer _bodyMeshRenderer;
 
     [SerializeField] private TMP_Text _speedometer;
-    [SerializeField] private TMP_Text _rpmText;
 
     [SerializeField] private Rigidbody _rb;
 
@@ -28,9 +27,9 @@ public class CarControl : MonoBehaviour
 
     Vector3 _acceleration = new Vector3(0, 0, 0);
     bool _hasAcceleration = false;
-    private float _forward = 0;
-    private float _rpm = 0f;
-    private float _steer = 0;
+    private float _forward = 0f;
+    private float _motor = 1000f;
+    private float _steer = 0f;
 
     private float _measuredSpeed = 0f;
     private float _forwardVelocity = 0f;
@@ -70,8 +69,8 @@ public class CarControl : MonoBehaviour
             _steer = steerActionValue;
         }
 
-        frwc.motorTorque = _rpm;
-        flwc.motorTorque = _rpm;
+        frwc.motorTorque = _motor * _forward;
+        flwc.motorTorque = _motor * _forward;
 
         frwc.steerAngle = 30f * _steer;
         flwc.steerAngle = 30f * _steer;
@@ -101,39 +100,7 @@ public class CarControl : MonoBehaviour
 
         _averageWheelHitForwardSlip = wheelHitForwardSlipSum / _wheelHits.Length;
 
-
-
-        // Player tries to go with forward gear
-        if (_rpm < 2000 && _forward > 0)
-        {
-            _rpm += 10 * (1 - Math.Abs(_averageWheelHitForwardSlip)) * _forward;
-        }
-
-        // Player tries to go with neutral gear
-        else if (_forward == 0 & _rpm != 0)
-        {
-            if (_rpm > 50)
-            {
-                _rpm -= 50;
-            }
-            else if (_rpm < -50)
-            {
-                _rpm += 50;
-            }
-        }
-
-        // reverse gear while going forward
-        else if (_rpm > 0 && _forward <= 0)
-        {
-            _rpm += 500 * (1 - Math.Abs(_averageWheelHitForwardSlip)) * _forward;
-        }
-        // reverse gear while going backward
-        else if (_rpm < 0 && _forward <= 0 && _rpm > -1000)
-        {
-            _rpm += 7 * (1 - Math.Abs(_averageWheelHitForwardSlip)) * _forward;
-        }
-
-        if (_forward < 0 && _forwardVelocity > 0 || _forward > 0 && _forwardVelocity < 0)
+        if (_forward < 0 && _forwardVelocity > 10 || _forward > 0 && _forwardVelocity < -10)
         {
             frwc.brakeTorque = 10000f;
             flwc.brakeTorque = 10000f;
@@ -156,7 +123,6 @@ public class CarControl : MonoBehaviour
         _forwardVelocity = transform.InverseTransformDirection(_rb.linearVelocity).z;
 
         _speedometer.SetText(Math.Floor(_measuredSpeed * 3.6).ToString() + " km/h");
-        _rpmText.SetText(Math.Floor(_rpm).ToString() + " RPM");
 
         if (brwc.brakeTorque > 0 || blwc.brakeTorque > 0 || frwc.brakeTorque > 0 || flwc.brakeTorque > 0)
         {
@@ -169,7 +135,9 @@ public class CarControl : MonoBehaviour
             _rearRightLight.intensity = 0.1f;
         }
 
-        engineSound.pitch = Mathf.Clamp(Math.Abs(_rpm) / 1000, 0.5f, 2.5f);
+        engineSound.pitch = Mathf.Clamp(Math.Abs(_forwardVelocity) / 30f, 0.5f, 2.5f);
+
+        Debug.Log(_averageWheelHitForwardSlip);
 
         /*
         // FIXME: remove click sound while looping and add start and end sounds
